@@ -3,6 +3,7 @@ use crate::{
     task::{exit_current_and_run_next, suspend_current_and_run_next},
     timer::get_time_us,
 };
+use crate::task::get_syscall_count;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -39,7 +40,22 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 }
 
 // TODO: implement the syscall
-pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
+pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
     trace!("kernel: sys_trace");
-    -1
+    match trace_request {
+        // 读取一个字节
+        0 => unsafe {
+            *(id as *const u8) as isize
+        },
+        // 写入 data 最低位的一个字节
+        1 => {
+            unsafe {
+                *(id as *mut u8) = data as u8;
+            }
+            0
+        },
+        // 统计当前任务 syscall_id 调用次数，sys_trace 也要计入
+        2 => get_syscall_count(id) as isize,
+        _ => -1
+    }
 }
