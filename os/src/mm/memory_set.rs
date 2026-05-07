@@ -272,7 +272,7 @@ impl MemorySet {
         }).is_some()
     }
 
-    /// 申请内存
+    /// 申请指定区域内存映射
     pub fn mmap(&mut self, start: usize, end: usize, port: usize) -> isize {
         let start_va: VirtAddr = start.into();
         let end_va: VirtAddr = end.into();
@@ -295,6 +295,7 @@ impl MemorySet {
         0
     }
 
+    /// 取消指定区域内存映射
     pub fn munmap(&mut self, start: usize, end: usize) -> isize {
         let start_va: VirtAddr = start.into();
         let end_va: VirtAddr = end.into();

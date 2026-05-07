@@ -217,12 +217,14 @@ pub fn get_syscall_count(syscall_id: usize) -> usize {
     inner.tasks[tid].get_syscall_count(syscall_id)
 }
 
+/// 申请指定区域内存映射
 pub fn mmap(start: usize, end: usize, port: usize) -> isize {
     let mut inner = TASK_MANAGER.inner.exclusive_access();
     let tid = inner.current_task;
     inner.tasks[tid].memory_set.mmap(start, end, port)
 }
 
+/// 取消指定区域内存映射
 pub fn munmap(start: usize, end: usize) -> isize {
     let mut inner = TASK_MANAGER.inner.exclusive_access();
     let tid = inner.current_task;

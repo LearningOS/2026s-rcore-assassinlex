@@ -101,6 +101,7 @@ impl TaskControlBlock {
         }
     }
 
+    /// 更新当前任务系统调用统计数
     pub fn increase_syscall_count(&mut self, syscall_id: usize) {
         if syscall_id >= MAX_SYSCALL_ID {
             return;
@@ -108,6 +109,7 @@ impl TaskControlBlock {
         self.syscall_count[syscall_id] += 1;
     }
 
+    /// 获取当前任务系统调用统计数
     pub fn get_syscall_count(&self, syscall_id: usize) -> usize {
         if syscall_id >= MAX_SYSCALL_ID {
             0
