@@ -212,7 +212,7 @@ pub fn increase_syscall_count(syscall_id: usize) {
 
 /// 获取系统调用数
 pub fn get_syscall_count(syscall_id: usize) -> usize {
-    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let inner = TASK_MANAGER.inner.exclusive_access();
     let tid = inner.current_task;
     inner.tasks[tid].get_syscall_count(syscall_id)
 }

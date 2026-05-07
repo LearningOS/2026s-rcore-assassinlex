@@ -265,7 +265,7 @@ impl MemorySet {
 
     /// 内存区间是否已被映射
     pub fn is_range_mapped(&self, start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> bool {
-        self.areas.iter().find(|&&area| {
+        self.areas.iter().find(|&area| {
             let area_start_vpn = area.vpn_range.get_start();
             let area_end_vpn = area.vpn_range.get_end();
             start_vpn.0 <= area_start_vpn.0 && end_vpn.0 >= area_end_vpn.0

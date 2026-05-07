@@ -1,9 +1,8 @@
 //! Process management syscalls
 
 use core::mem::size_of;
-use riscv::paging::PageTableFlags;
 use crate::config::PAGE_SIZE;
-use crate::mm::{translated_byte_buffer, MapPermission, PTEFlags, PageTable, VirtAddr};
+use crate::mm::{translated_byte_buffer, PTEFlags, PageTable, VirtAddr};
 use crate::task::{change_program_brk, current_user_token, exit_current_and_run_next, get_syscall_count, mmap, munmap, suspend_current_and_run_next};
 use crate::timer::get_time_us;
 
