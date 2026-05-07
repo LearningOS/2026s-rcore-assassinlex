@@ -65,26 +65,29 @@ pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
     let vpn = va.floor();
     let offset = va.page_offset();
     let page_table = PageTable::from_token(current_user_token());
-    let pte = page_table.translate(vpn).unwrap();
-    let exit_code = match trace_request {
-        // 读取一个字节
-        0 => {
-            if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::R) {
-                return -1;
-            }
-            pte.ppn().get_bytes_array()[offset] as isize
-        },
-        // 写入 data 最低位的一个字节
-        1 => {
-            if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::W) {
-                return -1;
-            }
-            pte.ppn().get_bytes_array()[offset] = data as u8;
-            0
-        },
-        // 统计当前任务 syscall_id 调用次数，sys_trace 也要计入
-        2 => get_syscall_count(id) as isize,
-        _ => -1
+    let exit_code =  if let Some(pte) = page_table.translate(vpn) {
+        match trace_request {
+            // 读取一个字节
+            0 => {
+                if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::R) {
+                    return -1;
+                }
+                pte.ppn().get_bytes_array()[offset] as isize
+            },
+            // 写入 data 最低位的一个字节
+            1 => {
+                if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::W) {
+                    return -1;
+                }
+                pte.ppn().get_bytes_array()[offset] = data as u8;
+                0
+            },
+            // 统计当前任务 syscall_id 调用次数，sys_trace 也要计入
+            2 => get_syscall_count(id) as isize,
+            _ => -1
+        }
+    } else {
+        -1
     };
     exit_code
 }
