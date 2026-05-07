@@ -202,3 +202,29 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
 }
+
+/// 统计系统调用数
+pub fn increase_syscall_count(syscall_id: usize) {
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let tid = inner.current_task;
+    inner.tasks[tid].increase_syscall_count(syscall_id);
+}
+
+/// 获取系统调用数
+pub fn get_syscall_count(syscall_id: usize) -> usize {
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let tid = inner.current_task;
+    inner.tasks[tid].get_syscall_count(syscall_id)
+}
+
+pub fn mmap(start: usize, end: usize, port: usize) -> isize {
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let tid = inner.current_task;
+    inner.tasks[tid].memory_set.mmap(start, end, port)
+}
+
+pub fn munmap(start: usize, end: usize) -> isize {
+    let mut inner = TASK_MANAGER.inner.exclusive_access();
+    let tid = inner.current_task;
+    inner.tasks[tid].memory_set.munmap(start, end)
+}

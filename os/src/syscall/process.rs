@@ -1,5 +1,11 @@
 //! Process management syscalls
-use crate::task::{change_program_brk, exit_current_and_run_next, suspend_current_and_run_next};
+
+use core::mem::size_of;
+use riscv::paging::PageTableFlags;
+use crate::config::PAGE_SIZE;
+use crate::mm::{translated_byte_buffer, MapPermission, PTEFlags, PageTable, VirtAddr};
+use crate::task::{change_program_brk, current_user_token, exit_current_and_run_next, get_syscall_count, mmap, munmap, suspend_current_and_run_next};
+use crate::timer::get_time_us;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -25,28 +31,84 @@ pub fn sys_yield() -> isize {
 /// YOUR JOB: get time with second and microsecond
 /// HINT: You might reimplement it with virtual memory management.
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
-pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
+pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    -1
+    let us = get_time_us();
+    let time_val = TimeVal {
+        sec: us / 1_000_000,
+        usec: us % 1_000_000,
+    };
+    let src = unsafe {
+        core::slice::from_raw_parts(
+            &time_val as *const TimeVal as *const u8,
+            size_of::<TimeVal>()
+        )
+    };
+    let token = current_user_token();
+    let buffers = translated_byte_buffer(token, ts as *const u8, size_of::<TimeVal>());
+    let mut start = 0usize;
+    for buffer in buffers.into_iter() {
+        let len = buffer.len();
+        buffer.copy_from_slice(&src[start..start+len]);
+        start += len;
+        if start >= src.len() {
+            break;
+        }
+    }
+    0
 }
 
 /// TODO: Finish sys_trace to pass testcases
 /// HINT: You might reimplement it with virtual memory management.
-pub fn sys_trace(_trace_request: usize, _id: usize, _data: usize) -> isize {
+pub fn sys_trace(trace_request: usize, id: usize, data: usize) -> isize {
     trace!("kernel: sys_trace");
-    -1
+    let va = VirtAddr::from(id);
+    let vpn = va.floor();
+    let offset = va.page_offset();
+    let page_table = PageTable::from_token(current_user_token());
+    let pte = page_table.translate(vpn).unwrap();
+    let exit_code = match trace_request {
+        // 读取一个字节
+        0 => {
+            if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::R) {
+                return -1;
+            }
+            pte.ppn().get_bytes_array()[offset] as isize
+        },
+        // 写入 data 最低位的一个字节
+        1 => {
+            if !pte.flags().contains(PTEFlags::V | PTEFlags::U | PTEFlags::W) {
+                return -1;
+            }
+            pte.ppn().get_bytes_array()[offset] = data as u8;
+            0
+        },
+        // 统计当前任务 syscall_id 调用次数，sys_trace 也要计入
+        2 => get_syscall_count(id) as isize,
+        _ => -1
+    };
+    exit_code
 }
 
 // YOUR JOB: Implement mmap.
-pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
-    trace!("kernel: sys_mmap NOT IMPLEMENTED YET!");
-    -1
+pub fn sys_mmap(start: usize, len: usize, port: usize) -> isize {
+    trace!("kernel: sys_mmap");
+    if start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    if port & !0x7 != 0 || port & 0x7 == 0 {
+        return -1;
+    }
+    mmap(start, start+len, port)
 }
 
 // YOUR JOB: Implement munmap.
-pub fn sys_munmap(_start: usize, _len: usize) -> isize {
-    trace!("kernel: sys_munmap NOT IMPLEMENTED YET!");
-    -1
+pub fn sys_munmap(start: usize, len: usize) -> isize {
+    trace!("kernel: sys_munmap");
+    if start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    munmap(start, start+len)
 }
 /// change data segment size
 pub fn sys_sbrk(size: i32) -> isize {
