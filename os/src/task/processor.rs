@@ -125,6 +125,7 @@ pub fn munmap(start: usize, end: usize) -> isize {
     task_inner.memory_set.munmap(start, end)
 }
 
+/// 设置当前任务进程优先级权重
 pub fn set_priority(prio: usize) {
     let task = current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
