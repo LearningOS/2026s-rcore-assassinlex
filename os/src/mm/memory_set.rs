@@ -300,6 +300,56 @@ impl MemorySet {
             false
         }
     }
+
+    /// 内存区间是否已被映射
+    pub fn is_range_mapped(&self, start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> bool {
+        self.areas.iter().find(|&area| {
+            let area_start_vpn = area.vpn_range.get_start();
+            let area_end_vpn = area.vpn_range.get_end();
+            start_vpn.0 <= area_start_vpn.0 && end_vpn.0 >= area_end_vpn.0
+        }).is_some()
+    }
+
+    /// 申请指定区域内存映射
+    pub fn mmap(&mut self, start: usize, end: usize, port: usize) -> isize {
+        let start_va: VirtAddr = start.into();
+        let end_va: VirtAddr = end.into();
+        let start_vpn: VirtPageNum = start_va.floor();
+        let end_vpn: VirtPageNum = end_va.ceil();
+        if self.is_range_mapped(start_vpn, end_vpn) {
+            return -1;
+        }
+        let mut perm = MapPermission::U;
+        if port & 0x1 != 0 {
+            perm |= MapPermission::R;
+        }
+        if port & 0x2 != 0 {
+            perm |= MapPermission::W;
+        }
+        if port & 0x4 != 0 {
+            perm |= MapPermission::X;
+        }
+        self.insert_framed_area(start_va, end_va, perm);
+        0
+    }
+
+    /// 取消指定区域内存映射
+    pub fn munmap(&mut self, start: usize, end: usize) -> isize {
+        let start_va: VirtAddr = start.into();
+        let end_va: VirtAddr = end.into();
+        let start_vpn: VirtPageNum = start_va.floor();
+        let end_vpn: VirtPageNum = end_va.ceil();
+        let pair = self.areas.iter().enumerate().find(|(_, area)| {
+            area.vpn_range.get_start() == start_vpn && area.vpn_range.get_end() == end_vpn
+        });
+        if let Some((idx, _)) = pair {
+            let mut area = self.areas.remove(idx);
+            area.unmap(&mut self.page_table);
+            0
+        } else {
+            -1
+        }
+    }
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {

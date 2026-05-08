@@ -23,7 +23,30 @@ impl TaskManager {
     }
     /// Take a process out of the ready queue
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
-        self.ready_queue.pop_front()
+        // self.ready_queue.pop_front()
+        if self.ready_queue.is_empty() {
+            return None;
+        }
+        //  idx: stride 最小进程索引
+        let idx = self.ready_queue
+            .iter()
+            .enumerate()
+            .min_by(|(_, t1), (_, t2)| {
+                let t1_inner = t1.inner_exclusive_access();
+                let t2_inner = t2.inner_exclusive_access();
+                // 处理溢出回绕
+                if (t1_inner.stride.wrapping_sub(t2_inner.stride) as isize) < 0 {
+                    core::cmp::Ordering::Less
+                } else {
+                    core::cmp::Ordering::Greater
+                }
+            })
+            .map(|(i, _)| i)
+            .unwrap();
+        let task = self.ready_queue.remove(idx).unwrap();
+        let mut task_inner = task.inner_exclusive_access();
+        task_inner.stride = task_inner.stride.wrapping_add(task_inner.pass);
+        Some(task)
     }
 }
 

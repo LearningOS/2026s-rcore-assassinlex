@@ -11,6 +11,7 @@ use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
 use lazy_static::*;
+use crate::config::BIG_STRIDE;
 
 /// Processor management structure
 pub struct Processor {
@@ -108,4 +109,24 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
     unsafe {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
+}
+
+/// 申请指定区域内存映射
+pub fn mmap(start: usize, end: usize, port: usize) -> isize {
+    let task = current_task().unwrap();
+    let task_inner = task.inner_exclusive_access();
+    task_inner.memory_set.mmap(start, end, port)
+}
+
+/// 取消指定区域内存映射
+pub fn munmap(start: usize, end: usize) -> isize {
+    let task = current_task().unwrap();
+    let task_inner = task.inner_exclusive_access();
+    task_inner.memory_set.munmap(start, end)
+}
+
+pub fn set_priority(prio: usize) {
+    let task = current_task().unwrap();
+    let task_inner = task.inner_exclusive_access();
+    task_inner.pass = BIG_STRIDE / prio;
 }
