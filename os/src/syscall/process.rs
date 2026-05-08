@@ -9,7 +9,7 @@ use crate::{
         suspend_current_and_run_next,
     },
 };
-use crate::config::{BIG_STRIDE, PAGE_SIZE};
+use crate::config::{PAGE_SIZE};
 use crate::mm::translated_byte_buffer;
 use crate::task::{mmap, munmap, set_priority};
 use crate::timer::get_time_us;

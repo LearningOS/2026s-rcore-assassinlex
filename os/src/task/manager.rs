@@ -46,6 +46,7 @@ impl TaskManager {
         let task = self.ready_queue.remove(idx).unwrap();
         let mut task_inner = task.inner_exclusive_access();
         task_inner.stride = task_inner.stride.wrapping_add(task_inner.pass);
+        drop(task_inner);
         Some(task)
     }
 }

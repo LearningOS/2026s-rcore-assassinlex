@@ -114,19 +114,19 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
 /// 申请指定区域内存映射
 pub fn mmap(start: usize, end: usize, port: usize) -> isize {
     let task = current_task().unwrap();
-    let task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access();
     task_inner.memory_set.mmap(start, end, port)
 }
 
 /// 取消指定区域内存映射
 pub fn munmap(start: usize, end: usize) -> isize {
     let task = current_task().unwrap();
-    let task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access();
     task_inner.memory_set.munmap(start, end)
 }
 
 pub fn set_priority(prio: usize) {
     let task = current_task().unwrap();
-    let task_inner = task.inner_exclusive_access();
+    let mut task_inner = task.inner_exclusive_access();
     task_inner.pass = BIG_STRIDE / prio;
 }
